@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<p class='lead'>Welcome to Nilufar Chat Platform</p><br>
+    <a href="{% url 'register'%}">Lets sign u up so u can start a chat</a><br><br>
+    <a href="{% url 'login'%}">U already have an account? Let's log u in</a>
+{#    <a href="#">let's get u where u can talk to everyone!</a><br>#}
+{#    <a href="#">I want to talk to a specific user!</a>#}
+{% endblock %}

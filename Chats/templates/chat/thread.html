@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{#    <h3>Thread for {% if user != object.first %}{{ object.first }}{% else %}{{ object.second }}{% endif %}</h3>#}
+    <div class="row">
+        <div class="col-9">
+            <h3>Messages</h3>
+            <ul id='chat-items' class="list-group" style="padding: 0px" >
+
+            </ul>
+            <form id='form' method='POST'>
+                {% csrf_token %}
+                <input type='hidden' autocomplete="off" id="'myUsername" value={{ user.username }}/>
+                <textarea id="chat_messages"  class="form-control" readonly rows="15" cols="30">{% for chat in object.chatmessage_set.all %} {{ chat.user }} : {{ chat.message }}
+{% endfor %}</textarea>
+                {{form.as_p }}
+                <input type='submit' class='btn btn-primary'/>
+            </form>
+        </div>
+        <div class="col-3">
+            <h4>{{ user.username }}(<a id="logout" href="#">Logout</a> )</h4>
+            <h3>Online Users</h3>
+            <ul id='user-items'> </ul>
+        </div>
+    </div>
+
+
+
+
+{% endblock %}
+
+{% block script %}
+<script>
+    var is_open = false;
+    loc = window.location
+    var formData = $("#form")
+    var messageInput = $("#id_message")
+    var chatHolder = $("#chat_messages")
+    var userHolder = $("#user-items")
+    var me = $("#myUsername").val()
+    var wsStart = 'ws://'
+    if (loc.protocol == 'https:'){
+        wsStart = 'wss://'
+    }
+    var endpoint = wsStart + loc.host + loc.pathname
+
+    var socket = new WebSocket(endpoint)
+
+    console.log('nil1',socket)
+
+
+    socket.onopen = function (e){
+        console.log("onopen-message", e)
+        is_open = true;
+        formData.submit(function (event){
+            event.preventDefault()
+            if(is_open===true){
+                var msgText = messageInput.val();
+                var finalData = {
+                    'message' : msgText
+                }
+                {#console.log(finalData)#}
+                if(msgText.length >0){
+                    socket.send(msgText);
+                    formData[0].reset()
+                }else{
+                    alert('message text is empty!')
+                }
+            }else{
+                alert('connection is not open!')
+            }
+
+        })
+    }
+
+
+
+    socket.onmessage = function (e){
+        var chatDataMsg = JSON.parse(e.data)
+        var onlineList = []
+        console.log(chatDataMsg)
+        var onlineCount = 0;
+        if(chatDataMsg["type"] === "send_updates"){
+            onlineCount = chatDataMsg["onlineCount"];
+            onlineList = chatDataMsg["onlineList"];
+            userHolder.html('')
+            userHolder.append('<li data-username="1" class="list-group-item active " style="cursor: pointer">Main Channel</li>');
+            onlineList.forEach(function(username){
+                userHolder.append('<li data-username="' + username +
+                    '" class="list-group-item " style="cursor: pointer">' + username + '</li>');
+            });
+        }else if(chatDataMsg["type"] === "new_message"){
+            chatHolder.append( " " + chatDataMsg.username + " : " + chatDataMsg.message + "\n")
+        }
+    }
+
+    socket.onerror = function (e){
+        console.log("onerror-message",e)
+        is_open= false;
+    }
+
+    socket.onclose = function (e){
+        console.log("onclose-message",e)
+        is_open= false;
+        $.ajax({
+                method: "GET",
+                url: "/users/logout/",
+                contentType:'application/json',
+                beforeSend:function( jqXHR, settings ){
+                    $.LoadingOverlay("show");
+                },
+                success:function ( data, textStatus, jqXHR ){
+                    window.location.reload(true);
+                    $.LoadingOverlay("hide");
+                },
+                error:function ( jqXHR, textStatus, errorThrown ){
+                    alert('Error in logout');
+                },
+                complete:function ( jqXHR, textStatus ){
+                    $.LoadingOverlay("hide");
+                }
+            })
+
+
+    }
+    $(document).ready(function(){
+        $(document).on('click','.list-group-item',function (e){
+            e.preventDefault();
+            $('.list-group-item').removeClass('active')
+            $(this).addClass('active')
+            var dataUsername = $(this).attr("data-username");
+            loadChats(dataUsername)
+        });
+
+
+        function loadChats(dataUsername){
+            $.ajax({
+                method: "GET",
+                url: "getMessages",
+
+                data: { username: dataUsername },
+                contentType:'application/json',
+                beforeSend:function( jqXHR, settings ){
+                    $.LoadingOverlay("show");
+                    chatHolder.html('')
+                },
+                success:function ( data, textStatus, jqXHR ){
+
+                    console.log(data)
+                    if(data['status'] === 'ok'){
+                        var messages = data['messages'];
+                        var thread_id = data['thread_id'];
+                        for (let i = 0; i < messages.length; i++) {
+                            const sender = messages[i]['sender'];
+                            const message = messages[i]['message'];
+                            const sent_at = messages[i]['sent_at']
+                            chatHolder.append( " " + sender + " : " + message + " -> ("+sent_at+")\n")
+                        }
+                        window.history.pushState("", "", "/messages/" + thread_id);
+
+                    }else{
+                        alert('no data')
+                    }
+                },
+                error:function ( jqXHR, textStatus, errorThrown ){
+                    alert('Error in request ->' + textStatus);
+                },
+                complete:function ( jqXHR, textStatus ){
+                    $.LoadingOverlay("hide");
+                }
+            })
+        }
+        loadChats(1)
+
+        $("#logout").click(function (e){
+            e.preventDefault();
+            socket.close()
+
+        });
+    });
+
+
+
+</script>
+{% endblock %}
