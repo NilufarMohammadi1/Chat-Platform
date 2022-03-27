@@ -11,7 +11,8 @@
             </ul>
             <form id='form' method='POST'>
                 {% csrf_token %}
-                <input type='hidden' autocomplete="off" id="'myUsername" value={{ user.username }}/>
+                <input type='hidden'  id="myUsername" value="{{ user.username }}" />
+                <input type='hidden'  id="thread_id" value=""/>
                 <textarea id="chat_messages"  class="form-control" readonly rows="15" cols="30">{% for chat in object.chatmessage_set.all %} {{ chat.user }} : {{ chat.message }}
 {% endfor %}</textarea>
                 {{form.as_p }}
@@ -57,12 +58,11 @@
             event.preventDefault()
             if(is_open===true){
                 var msgText = messageInput.val();
-                var finalData = {
-                    'message' : msgText
-                }
-                {#console.log(finalData)#}
+                var finalData = JSON.stringify({
+                                'type':'text',
+                                'text':msgText, })
                 if(msgText.length >0){
-                    socket.send(msgText);
+                    socket.send(finalData);
                     formData[0].reset()
                 }else{
                     alert('message text is empty!')
@@ -87,10 +87,16 @@
             userHolder.html('')
             userHolder.append('<li data-username="1" class="list-group-item active " style="cursor: pointer">Main Channel</li>');
             onlineList.forEach(function(username){
-                userHolder.append('<li data-username="' + username +
-                    '" class="list-group-item " style="cursor: pointer">' + username + '</li>');
+                console.log($('#myUsername').val())
+                console.log(username)
+                if(username !== $('#myUsername').val()){
+                    userHolder.append('<li data-username="' + username +
+                        '" class="list-group-item " style="cursor: pointer">' + username + '</li>');
+                }
+
             });
-        }else if(chatDataMsg["type"] === "new_message"){
+        }
+        else if(chatDataMsg["type"] === "new_message"){
             chatHolder.append( " " + chatDataMsg.username + " : " + chatDataMsg.message + "\n")
         }
     }
@@ -158,6 +164,13 @@
                             chatHolder.append( " " + sender + " : " + message + " -> ("+sent_at+")\n")
                         }
                         window.history.pushState("", "", "/messages/" + thread_id);
+                        $('#thread_id').val(thread_id)
+                        if(socket.readyState === 1){
+                            socket.send(JSON.stringify({
+                                'thread_id':thread_id,
+                                'type':'update_thread'
+                            }));
+                        }
 
                     }else{
                         alert('no data')
@@ -171,7 +184,7 @@
                 }
             })
         }
-        loadChats(1)
+        loadChats(1);
 
         $("#logout").click(function (e){
             e.preventDefault();

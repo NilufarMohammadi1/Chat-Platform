@@ -28,12 +28,13 @@ class ChatConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
         current_user = self.scope['user']
 
+        # print('query ->>>>>>', self.scope['url_route']['kwargs'])
         self.makeOnline(current_user.username)
 
         thread_object = await self.getCurrentTread()
 
         self.chat_room = f'thread_{thread_object.id}'
-
+        print('chat_room', self.chat_room)
         await self.channel_layer.group_add(self.chat_room, self.channel_name)
 
         # if 'thread_id' in kwargs:
@@ -73,26 +74,33 @@ class ChatConsumer(AsyncConsumer):
 
     async def websocket_receive(self, event):
 
-        json_data = {
-            "text": event['text'],
-            "username":await  self. getSenderUsername(),
-            "type": "chat_message",
 
-        }
+        # print('eveeeeent',event)
+        jsonText = json.loads(event['text'])
+        event_type = jsonText['type']
 
-        if 'text' in event:
-            # #trigger function to save in database
-            await self.create_chat_message(await self.getSenderId(), event['text'], await self.getCurrentTread())
+        if event_type == 'text':
+            json_data = {
+                "text": jsonText['text'],
+                "username": await self.getSenderUsername(),
+                "type": "chat_message"
+            }
+            senderId = await self.getSenderId()
+            currentThread = await self.getCurrentTread()
+            print('crr', self.chat_room, json_data)
+            await self.channel_layer.group_add(self.chat_room, self.channel_name)
+            await self.channel_layer.group_send(self.chat_room, json_data)
+            await self.create_chat_message(senderId, jsonText['text'], currentThread)
+            print('after')
+        elif event_type == 'update_thread':
+            thread_id = jsonText['thread_id']
+            self.chat_room = f'thread_{thread_id}'
 
-        # send chat message event to the room
-        await self.channel_layer.group_send(
-            self.chat_room,
-            json_data
-        )
 
-    async def disconnect(self, close_code):
-        print("disconnected", close_code)
-        self.makeOffline()
+    async def websocket_disconnect(self, event):
+        print("disconnected", event)
+        self.makeOffline(await self.getSenderUsername())
+
 
     async def chat_message(self, event):
         print('message -> ', event)
@@ -154,14 +162,16 @@ class ChatConsumer(AsyncConsumer):
     @sync_to_async
     def getCurrentTread(self):
         try:
-            thread_id = "1"
-            if 'thread_id' in self.scope['url_route']['kwargs']:
-                thread_id = self.scope['url_route']['kwargs']['thread_id']
+            thread_id = self.chat_room.replace("thread_", "")
+            # print(self.scope['query_string'])
+            # if 'thread_id' in self.scope['url_route']['kwargs']:
+            #     thread_id = self.scope['url_route']['kwargs']['thread_id']
+            #     print('getCurrentTread -> thread_id', thread_id)
             thread_nil = Thread.objects.get(id=int(thread_id))
             return thread_nil
         except Exception as ex:
             print(f'Error in getCurrentTread {str(ex)}')
-        return None
+        return Thread.objects.get(id=int(1))
 
 
 

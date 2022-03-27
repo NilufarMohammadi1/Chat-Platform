@@ -25,9 +25,10 @@ def register(request):
                 is_grp_admin=False
             )
             main_thread.save()
+
             if 'next' in request.GET:
                 return redirect(request.GET.get('next'))
-            return redirect('/messages/')
+            return redirect('/users/login/')
     else:
         form = RegistrationForm()
 
