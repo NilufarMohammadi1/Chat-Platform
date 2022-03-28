@@ -28,7 +28,6 @@ class ChatConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
         current_user = self.scope['user']
 
-        # print('query ->>>>>>', self.scope['url_route']['kwargs'])
         self.makeOnline(current_user.username)
 
         thread_object = await self.getCurrentTread()
@@ -37,22 +36,8 @@ class ChatConsumer(AsyncConsumer):
         print('chat_room', self.chat_room)
         await self.channel_layer.group_add(self.chat_room, self.channel_name)
 
-        # if 'thread_id' in kwargs:
-        #     # other_user = self.scope['url_route']['kwargs']['username']
-        #
-        #
-        #
-        # else:
-        #
-        #     thread_id = self.getCurrentTread()
-        #     thread_obj = await self.get_thread(thread_id)
-        #     self.thread_obj = thread_obj
-        #     self.chat_room = thread_obj.id
-
         onlineCount = self.getOnlinesCount()
         onlineList = self.getOnlineUsers()
-
-        # await self.channel_layer.group_add(self.group, self.channel_name, )
 
         await self.channel_layer.group_send(self.chat_room, {
             'type': 'send_updates',
