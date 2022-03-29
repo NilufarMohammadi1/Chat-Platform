@@ -65,7 +65,6 @@ def getMessages(request):
         self_username = user.username
 
         # PATH1
-
         self_threads = ThreadMember.objects.select_related("thread") \
             .select_related("user").filter(user__username=self_username) \
             .filter(thread__thread_type='individual')
@@ -81,7 +80,6 @@ def getMessages(request):
         #
         threads = list(self_threads.filter(thread__id__in=ids))
         chat_messages_thread_id = 1
-
         if len(threads) > 0:
             chat_messages_thread_id = threads[0].thread_id
         else:
@@ -91,7 +89,6 @@ def getMessages(request):
                 ThreadMember.objects.create(thread=new_thread, user=Users.objects.get(username=destination_username))
                 chat_messages_thread_id = new_thread.id
         #     # create thread for chat
-
         # PATH2
 
         if destination_username == "1":

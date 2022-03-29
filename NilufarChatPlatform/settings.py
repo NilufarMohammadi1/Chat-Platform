@@ -13,15 +13,6 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 
-DB_NAME='ChatPlatform'
-DB_USER='postgres'
-DB_PASSWORD='root'
-DB_HOST='localhost'
-DB_PORT=5432
-
-
-
-
 
 
 
@@ -76,14 +67,15 @@ AUTHENTICATION_BACKENDS = (
 
 # WSGI_APPLICATION = 'NilufarChatPlatform.wsgi.application'
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='ChatPlatform', cast=str),
-        'USER': config('DB_USER', default='postgres', cast=str),
-        'PASSWORD': config('DB_PASSWORD', default='', cast=str),
-        'HOST': config('DB_HOST', default='127.0.0.1', cast=str),
-        'PORT': config('DB_PORT', default='5432', cast=str),
+        'NAME': os.environ.get('POSTGRES_NAME'),
+        'USER': os.environ.get('POSTGRES_USER'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
+        'HOST': 'db',
+        'PORT': '5432',
     }
 }
 
@@ -125,7 +117,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("localhost", 6379)],
+            "hosts": [("redis", 6379)],
         },
     },
 }

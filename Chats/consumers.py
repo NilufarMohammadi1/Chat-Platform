@@ -13,17 +13,17 @@ from django.core.asgi import get_asgi_application
 import redis
 from django.conf import settings
 
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6379
+# REDIS_HOST = 'redis://redis:6379'
 
-redis_client = redis.StrictRedis(host=REDIS_HOST,
-                                 port=REDIS_PORT, db=0)
+
+redis_client = redis.StrictRedis('redis',  6379)
 
 
 class ChatConsumer(AsyncConsumer):
     group = 'AllMembers'
     count = 0
     KEY_ONLINE_USERS = 'OnlineList'
+
 
     async def websocket_connect(self, event):
         current_user = self.scope['user']
@@ -114,6 +114,7 @@ class ChatConsumer(AsyncConsumer):
         return username in userList
 
     def getOnlineUsers(self):
+
         user_list = []
         while redis_client.llen(self.KEY_ONLINE_USERS) != 0:
             user_list.append(str(redis_client.lpop(self.KEY_ONLINE_USERS).decode()))
@@ -148,10 +149,6 @@ class ChatConsumer(AsyncConsumer):
     def getCurrentTread(self):
         try:
             thread_id = self.chat_room.replace("thread_", "")
-            # print(self.scope['query_string'])
-            # if 'thread_id' in self.scope['url_route']['kwargs']:
-            #     thread_id = self.scope['url_route']['kwargs']['thread_id']
-            #     print('getCurrentTread -> thread_id', thread_id)
             thread_nil = Thread.objects.get(id=int(thread_id))
             return thread_nil
         except Exception as ex:
